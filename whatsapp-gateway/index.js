@@ -12,7 +12,7 @@ const {
   fetchLatestBaileysVersion,
 } = require('@whiskeysockets/baileys');
 
-const PORT = process.env.GATEWAY_PORT || 3001;
+const PORT = process.env.PORT || process.env.GATEWAY_PORT || 3001;
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8001';
 const WEBHOOK_TOKEN = process.env.WEBHOOK_TOKEN || 'whk_9c2f7a1e5b8d3046';
 const AUTH_DIR = path.join(__dirname, 'auth_info');

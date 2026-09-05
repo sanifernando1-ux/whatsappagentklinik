@@ -5,3 +5,7 @@ credentials.json
 *.pem
 *.key
 .credentials
+whatsapp-gateway/auth_info/
+node_modules/
+build/
+__pycache__/

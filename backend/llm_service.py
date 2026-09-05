@@ -1,34 +1,66 @@
 import os
 from dotenv import load_dotenv
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
+import google.generativeai as genai
 
 load_dotenv()
 
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
+# All provider credentials come from settings.ai (persisted in MongoDB via the
+# dashboard) — nothing is read from environment variables here. Once an admin
+# saves a provider/model/api_key/base_url in Settings > AI, it stays in effect
+# until they change or clear it.
 
-# Known providers use the Emergent Universal Key by default; a custom key overrides it.
-KNOWN_PROVIDERS = {"openai", "anthropic", "gemini"}
+
+async def _call_openai_compatible(system_message, user_text, model, api_key, base_url):
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url or None)
+    resp = await client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_text},
+        ],
+    )
+    return resp.choices[0].message.content or ""
+
+
+async def _call_anthropic(system_message, user_text, model, api_key, base_url):
+    client = AsyncAnthropic(api_key=api_key, base_url=base_url or None)
+    resp = await client.messages.create(
+        model=model,
+        max_tokens=1024,
+        system=system_message,
+        messages=[{"role": "user", "content": user_text}],
+    )
+    parts = [b.text for b in resp.content if getattr(b, "type", "") == "text"]
+    return "".join(parts)
+
+
+async def _call_gemini(system_message, user_text, model, api_key):
+    genai.configure(api_key=api_key)
+    gm = genai.GenerativeModel(model_name=model, system_instruction=system_message)
+    resp = await gm.generate_content_async(user_text)
+    return (resp.text or "") if resp else ""
 
 
 async def generate_reply(system_message: str, user_text: str, session_id: str, settings: dict) -> str:
     ai = (settings or {}).get("ai", {})
     provider = ai.get("provider", "openai")
     model = ai.get("model", "gpt-4o")
-    custom_key = ai.get("api_key")
+    api_key = ai.get("api_key") or ""
+    base_url = ai.get("base_url") or ""
 
-    if provider in KNOWN_PROVIDERS and not custom_key:
-        key = EMERGENT_LLM_KEY
-    else:
-        key = custom_key or EMERGENT_LLM_KEY
+    if not api_key:
+        raise RuntimeError("Belum ada API key AI. Isi provider/model/API key di Settings > AI & Model.")
 
-    chat = LlmChat(
-        api_key=key,
-        session_id=session_id,
-        system_message=system_message,
-    ).with_model(provider, model)
-
-    resp = await chat.send_message(UserMessage(text=user_text))
-    return (resp or "").strip()
+    if provider == "anthropic":
+        return (await _call_anthropic(system_message, user_text, model, api_key, base_url)).strip()
+    if provider == "gemini":
+        return (await _call_gemini(system_message, user_text, model, api_key)).strip()
+    # "openai" and "custom" both speak the OpenAI-compatible chat completions
+    # API; "custom" just requires a base_url pointing at the compatible
+    # endpoint (self-hosted model, proxy, OpenRouter, vLLM, etc.).
+    return (await _call_openai_compatible(system_message, user_text, model, api_key, base_url)).strip()
 
 
 async def classify_intent(text: str, settings: dict) -> str:
