@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Send, UserCog, Bot, User, Headphones, CheckCheck, X, Search } from "lucide-react";
 import api from "../lib/api";
+import { useWS } from "../context/WSContext";
 
 const STATUS_BADGE = {
   active: "bg-emerald-50 text-emerald-600",
@@ -35,6 +36,15 @@ export default function Conversations() {
   }, [sel]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [detail?.messages?.length]);
+
+  const ws = useWS();
+  useEffect(() => {
+    if (!ws) return;
+    return ws.subscribe((d) => {
+      loadList();
+      if (d.conversation_id && d.conversation_id === sel) loadDetail(sel);
+    });
+  }, [ws, sel]);
 
   const send = async () => {
     if (!text.trim() || !sel) return;

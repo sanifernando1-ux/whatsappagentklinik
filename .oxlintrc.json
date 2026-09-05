@@ -1,4 +1,19 @@
 {
+  "env": {
+    "browser": true,
+    "node": true,
+    "amd": true,
+    "es2021": true
+  },
+  "globals": {
+    "define": "readonly",
+    "module": "writable",
+    "exports": "writable",
+    "require": "readonly",
+    "self": "readonly",
+    "global": "readonly",
+    "globalThis": "readonly"
+  },
   "ignorePatterns": [
     "**/node_modules/**",
     "frontend/node_modules/**",

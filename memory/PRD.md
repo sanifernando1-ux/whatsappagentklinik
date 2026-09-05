@@ -25,11 +25,17 @@ Bangun Web WhatsApp Agent AI untuk Klinik Kimia Farma Sepinggan (Balikpapan): as
 - Dashboard: stats (containment, trend, intent dist), Connection (QR/pairing UI), Conversations (live chat + takeover/resume/close), Appointments (CRUD + status), Knowledge base, Workflow visualizer + module toggles, Settings (clinic/AI/services/doctors/menu/advanced).
 - Theme: Kimia Farma blue #0B6FB8 + orange #F58220, Plus Jakarta Sans, flat anti-slop UI.
 
+## Implemented — Iteration 3 (05 Jun 2026)
+- Node Kondisional (alur bertingkat): intent action "flow" dengan steps + options; tiap opsi bisa lanjut ke langkah lain (next_step) atau aksi terminal (message/link/booking_link/handoff/services/doctors/queue/booking). Contoh: tanya poli → cabang gigi → tanya darurat → handoff/booking. Editor visual di halaman Workflow (FlowEditor). Guard anti-loop 25 langkah.
+- Booking eksternal: action "booking_link" + field clinic.booking_url di Settings; booking internal bisa dimatikan lalu arahkan pasien ke tautan booking milik klinik.
+- Broadcast Promo: POST /api/broadcast (target all/active/handoff, throttle 0.25s), GET history & audience; halaman Broadcast di dashboard dengan preview jumlah penerima + riwayat.
+- Real-time: WSContext (single WebSocket, subscribe registry) → panel Percakapan & daftar update seketika tanpa refresh; broadcast WS pada aksi staf (takeover/resume/close/send) + pesan masuk.
+- Tested: 32/32 backend pytest + full frontend flows PASS.
+
 ## Backlog / Next
-- P1: WebSocket live push for conversations panel (currently toast+bell live; chat list still polls).
-- P2: RBAC multi-role staff accounts; audit log; data retention 90d anonymize.
-- P2: Embedding-based RAG (vector DB) upgrade from TF-IDF.
-- P2: Pydantic validation for Settings/workflow PUT; reminder retry cap.
+- P2: Broadcast via BackgroundTask + polling untuk audiens besar; schema validation (Pydantic) untuk settings/workflow PUT.
+- P2: RBAC multi-role staff; audit log; retensi data 90 hari.
+- P2: Embedding-based RAG (vector DB) upgrade dari TF-IDF.
 
 ## Implemented — Iteration 2 (05 Jun 2026)
 - Knowledge Base auto-seed: BPJS, Daftar Layanan & Tarif, SOP Pendaftaran, Jam & Lokasi.

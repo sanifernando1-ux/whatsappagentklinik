@@ -303,17 +303,37 @@ def _find_intent(settings, intent_id):
     return None
 
 
+def booking_link_text(intent, settings):
+    url = settings.get("clinic", {}).get("booking_url", "")
+    msg = intent.get("response") or "Untuk membuat janji temu, silakan gunakan tautan booking resmi klinik kami berikut ini:"
+    if url:
+        return f"{msg}\n\n🔗 {url}\n\n_Ketik MENU untuk kembali._"
+    return f"{msg}\n\n_(Tautan booking belum diatur oleh admin.)_ Ketik MENU untuk kembali."
+
+
 async def execute_intent(intent, conv, text, settings, result):
     action = intent.get("action", "rag")
     modules = settings.get("modules", {})
     if action == "static":
         result["replies"] = [intent.get("response") or "Baik, mohon tunggu sebentar."]
+    elif action in ("link", "booking_link"):
+        result["replies"] = [booking_link_text(intent, settings)]
     elif action == "services":
         result["replies"] = [await services_text(settings)]
     elif action == "doctors":
         result["replies"] = [doctors_text(settings)]
     elif action == "queue":
         result["replies"] = [await queue_text(settings)]
+    elif action == "flow":
+        steps = intent.get("steps", [])
+        if not steps:
+            reply, top = await rag_answer(conv, text, settings)
+            result["confidence"] = top
+            result["replies"] = [reply]
+        else:
+            first = steps[0]
+            result["flow"] = {"name": "intent_flow", "intent_id": intent["id"], "step_id": first.get("id")}
+            result["replies"] = [first.get("message", "")]
     elif action == "booking" and modules.get("booking", True):
         new_flow, msg = await start_booking(settings)
         result["flow"] = new_flow
@@ -321,11 +341,72 @@ async def execute_intent(intent, conv, text, settings, result):
     elif action == "handoff" and modules.get("handoff", True):
         result["handoff"] = True
         result["replies"] = [intent.get("response") or "Baik, saya hubungkan Anda dengan staf klinik. Mohon tunggu sebentar. 🙏"]
-    else:  # rag / faq / fallback
+    else:  # rag / faq / fallback / disabled-booking
         reply, top = await rag_answer(conv, text, settings)
         result["confidence"] = top
         result["replies"] = [reply]
     return result
+
+
+def _match_option(text, options):
+    t = text.lower().strip()
+    if t.isdigit() and 1 <= int(t) <= len(options):
+        return options[int(t) - 1]
+    for opt in options:
+        for kw in opt.get("keywords", []):
+            if kw and kw.lower() in t:
+                return opt
+    return None
+
+
+async def continue_intent_flow(conv, flow, text, settings):
+    """Multi-level conditional flow. Returns (replies, new_flow, handoff_bool)."""
+    t = text.lower().strip()
+    if t == "menu":
+        return [menu_text(settings)], None, False
+
+    turns = flow.get("_turns", 0) + 1
+    flow["_turns"] = turns
+    if turns > 25:  # safety guard against misconfigured next_step cycles
+        return [menu_text(settings)], None, False
+
+    intent = _find_intent(settings, flow.get("intent_id"))
+    if not intent:
+        return [menu_text(settings)], None, False
+    steps = {s.get("id"): s for s in intent.get("steps", [])}
+    step = steps.get(flow.get("step_id"))
+    if not step:
+        return [menu_text(settings)], None, False
+
+    options = step.get("options", [])
+    opt = _match_option(text, options)
+    if not opt:
+        return ["Maaf, pilihan tidak dikenali. " + step.get("message", "Silakan pilih salah satu opsi.")], flow, False
+
+    # Go deeper to another step
+    nxt = opt.get("next_step")
+    if nxt and nxt in steps:
+        flow["step_id"] = nxt
+        return [steps[nxt].get("message", "")], flow, False
+
+    # Terminal action
+    action = opt.get("action", "message")
+    if action in ("message", "static"):
+        return [opt.get("response") or "Baik, terima kasih."], None, False
+    if action in ("link", "booking_link"):
+        return [booking_link_text(opt, settings)], None, False
+    if action == "handoff" and settings.get("modules", {}).get("handoff", True):
+        return [opt.get("response") or "Baik, saya hubungkan Anda dengan staf klinik. 🙏"], None, True
+    if action == "services":
+        return [await services_text(settings)], None, False
+    if action == "doctors":
+        return [doctors_text(settings)], None, False
+    if action == "queue":
+        return [await queue_text(settings)], None, False
+    if action == "booking" and settings.get("modules", {}).get("booking", True):
+        new_flow, msg = await start_booking(settings)
+        return [msg], new_flow, False
+    return [opt.get("response") or "Baik, terima kasih."], None, False
 
 
 async def handle_incoming(conv, text, msg_type, settings):
@@ -377,6 +458,13 @@ async def handle_incoming(conv, text, msg_type, settings):
             return result
         replies, new_flow, appt = await continue_booking(conv, flow, text, settings)
         result.update(replies=replies, flow=new_flow, resolved_flow=new_flow is None, appointment=appt, intent="booking")
+        return result
+
+    # Active conditional intent flow (multi-level branch)
+    if flow and flow.get("name") == "intent_flow":
+        replies, new_flow, handoff = await continue_intent_flow(conv, flow, text, settings)
+        result.update(replies=replies, flow=new_flow, resolved_flow=new_flow is None,
+                      handoff=handoff, intent=flow.get("intent_id"))
         return result
 
     # Welcome / menu

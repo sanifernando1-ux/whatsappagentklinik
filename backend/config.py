@@ -37,6 +37,7 @@ DEFAULT_SETTINGS = {
         "phone": "(0542) 123456",
         "hours": "Senin–Sabtu 08.00–20.00 WITA, Minggu 08.00–14.00 WITA",
         "description": "Klinik pratama dengan layanan dokter umum, laboratorium, dan farmasi.",
+        "booking_url": "",
     },
     "ai": {"provider": "openai", "model": "gpt-4o", "api_key": "", "system_prompt": ""},
     "modules": {"faq": True, "booking": True, "rag": True, "handoff": True},

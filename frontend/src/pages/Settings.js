@@ -76,6 +76,7 @@ export default function Settings() {
             <div className="sm:col-span-2"><label className="label">Alamat</label><input className="input" value={s.clinic.address} onChange={(e) => setC("address", e.target.value)} data-testid="clinic-address" /></div>
             <div><label className="label">Telepon</label><input className="input" value={s.clinic.phone} onChange={(e) => setC("phone", e.target.value)} data-testid="clinic-phone" /></div>
             <div><label className="label">Jam Operasional</label><input className="input" value={s.clinic.hours} onChange={(e) => setC("hours", e.target.value)} data-testid="clinic-hours" /></div>
+            <div className="sm:col-span-2"><label className="label">Link Booking Eksternal (opsional)</label><input className="input" placeholder="https://booking.klinikanda.com" value={s.clinic.booking_url || ""} onChange={(e) => setC("booking_url", e.target.value)} data-testid="clinic-booking-url" /><p className="mt-1 text-xs text-slate-400">Jika ingin menonaktifkan booking internal, ubah aksi intent "Buat Janji Temu" di Workflow menjadi "Arahkan ke Link Booking Eksternal" dan isi tautan ini.</p></div>
             <div className="sm:col-span-2"><label className="label">Deskripsi</label><textarea rows={3} className="input" value={s.clinic.description} onChange={(e) => setC("description", e.target.value)} /></div>
           </div>
         )}

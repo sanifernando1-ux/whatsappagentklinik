@@ -3,9 +3,10 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, QrCode, MessagesSquare, CalendarDays,
   BookOpen, Workflow as WorkflowIcon, Settings as SettingsIcon,
-  LogOut, Menu, X, Bell, Plus,
+  LogOut, Menu, X, Bell, Plus, Megaphone,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useWS } from "../context/WSContext";
 import api from "../lib/api";
 
 const NAV = [
@@ -15,6 +16,7 @@ const NAV = [
   { to: "/janji-temu", label: "Janji Temu", icon: CalendarDays },
   { to: "/knowledge", label: "Knowledge Base", icon: BookOpen },
   { to: "/workflow", label: "Alur AI (Workflow)", icon: WorkflowIcon },
+  { to: "/broadcast", label: "Broadcast Promo", icon: Megaphone },
   { to: "/pengaturan", label: "Pengaturan", icon: SettingsIcon },
 ];
 
@@ -70,31 +72,19 @@ export default function Layout({ children }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
   };
 
+  const ws = useWS();
   useEffect(() => {
-    const token = localStorage.getItem("kf_token");
-    if (!token) return;
-    const base = process.env.REACT_APP_BACKEND_URL.replace(/^http/, "ws");
-    let ws, closed = false, retry;
-    const connect = () => {
-      ws = new WebSocket(`${base}/api/ws?token=${token}`);
-      ws.onmessage = (ev) => {
-        try {
-          const data = JSON.parse(ev.data);
-          if (data.handoff) {
-            playBeep();
-            pushToast({ title: `🔔 ${data.patient_name} butuh staf`, body: data.preview, tone: "orange" });
-            loadNotifs();
-          } else if (data.type === "message") {
-            pushToast({ title: `💬 ${data.patient_name}`, body: data.preview, tone: "blue" });
-          }
-        } catch (e) { /* noop */ }
-      };
-      ws.onclose = () => { if (!closed) retry = setTimeout(connect, 4000); };
-      ws.onerror = () => { try { ws.close(); } catch (e) {} };
-    };
-    connect();
-    return () => { closed = true; clearTimeout(retry); try { ws && ws.close(); } catch (e) {} };
-  }, []);
+    if (!ws) return;
+    return ws.subscribe((data) => {
+      if (data.handoff) {
+        playBeep();
+        pushToast({ title: `🔔 ${data.patient_name} butuh staf`, body: data.preview, tone: "orange" });
+        loadNotifs();
+      } else if (data.type === "message") {
+        pushToast({ title: `💬 ${data.patient_name}`, body: data.preview, tone: "blue" });
+      }
+    });
+  }, [ws]);
 
   const markAll = async () => { await api.post("/notifications/read-all"); setNotifs([]); setShowNotif(false); };
 

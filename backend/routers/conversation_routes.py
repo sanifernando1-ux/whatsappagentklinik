@@ -6,6 +6,7 @@ from database import db, clean, clean_list
 from auth import get_current_user
 from workflow import now_iso
 import gateway_client as gw
+from ws_manager import manager
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -54,6 +55,7 @@ async def staff_send(conv_id: str, req: SendReq, user=Depends(get_current_user))
     await db.conversations.update_one({"id": conv_id}, {"$set": {
         "status": "handoff", "ai_paused": True, "assigned_agent": user["id"],
         "last_message": req.text, "updated_at": now_iso()}})
+    await manager.broadcast({"type": "update", "conversation_id": conv_id})
     return clean(msg)
 
 
@@ -64,6 +66,7 @@ async def takeover(conv_id: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Percakapan tidak ditemukan")
     await db.conversations.update_one({"id": conv_id}, {"$set": {
         "status": "handoff", "ai_paused": True, "assigned_agent": user["id"], "updated_at": now_iso()}})
+    await manager.broadcast({"type": "update", "conversation_id": conv_id})
     return {"ok": True}
 
 
@@ -81,6 +84,7 @@ async def resume(conv_id: str, user=Depends(get_current_user)):
     await db.conversations.update_one({"id": conv_id}, {"$set": {
         "status": "active", "ai_paused": False, "assigned_agent": None,
         "flow": None, "negative_streak": 0, "updated_at": now_iso()}})
+    await manager.broadcast({"type": "update", "conversation_id": conv_id})
     return {"ok": True}
 
 
@@ -88,4 +92,5 @@ async def resume(conv_id: str, user=Depends(get_current_user)):
 async def close_conv(conv_id: str, user=Depends(get_current_user)):
     await db.conversations.update_one({"id": conv_id}, {"$set": {
         "status": "closed", "ai_paused": False, "updated_at": now_iso()}})
+    await manager.broadcast({"type": "update", "conversation_id": conv_id})
     return {"ok": True}

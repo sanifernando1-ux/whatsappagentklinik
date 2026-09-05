@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { WSProvider } from "./context/WSContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -9,6 +10,7 @@ import Conversations from "./pages/Conversations";
 import Appointments from "./pages/Appointments";
 import Knowledge from "./pages/Knowledge";
 import Workflow from "./pages/Workflow";
+import Broadcast from "./pages/Broadcast";
 import Settings from "./pages/Settings";
 
 function Protected({ children }) {
@@ -28,6 +30,7 @@ export default function App() {
             path="/*"
             element={
               <Protected>
+                <WSProvider>
                 <Layout>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
@@ -36,10 +39,12 @@ export default function App() {
                     <Route path="/janji-temu" element={<Appointments />} />
                     <Route path="/knowledge" element={<Knowledge />} />
                     <Route path="/workflow" element={<Workflow />} />
+                    <Route path="/broadcast" element={<Broadcast />} />
                     <Route path="/pengaturan" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Layout>
+                </WSProvider>
               </Protected>
             }
           />

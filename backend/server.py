@@ -15,6 +15,7 @@ from routers.appointment_routes import router as appointment_router
 from routers.knowledge_routes import router as knowledge_router
 from routers.settings_routes import router as settings_router
 from routers.dashboard_routes import router as dashboard_router
+from routers.broadcast_routes import router as broadcast_router
 
 load_dotenv()
 
@@ -58,6 +59,7 @@ app.include_router(appointment_router)
 app.include_router(knowledge_router)
 app.include_router(settings_router)
 app.include_router(dashboard_router)
+app.include_router(broadcast_router)
 
 
 async def reminder_loop():
