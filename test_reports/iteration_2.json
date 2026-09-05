@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 2 (new features) end-to-end tested. Backend: 27/27 pytest pass (existing 20 regression + 7 new in test_iter2.py covering KB seed, smart RAG BPJS answer, smart LLM router 'pengen ketemu dokter' → booking flow, workflow config GET/PUT persistence, /appointments/send-reminders returning {sent,total_due}, handoff keyword). Frontend Playwright: Knowledge page lists all 4 seeded docs; Workflow page renders 4 module toggles + router controls (toggle-llm-router, wf-fallback, wf-welcome-extra) + all 6 intent editor cards each with wf-name/action/menukey/keywords/examples/enabled/del + wf-add-intent works (6→7) + wf-save-btn persists an edited intent name across reload; Settings 'Lanjutan' toggle-reminders toggles+persists after settings-save-btn + reload; Appointments send-reminders-btn triggers POST and reminder-msg shows 'Terkirim 0 dari 2 pengingat H-1.' (0 sent expected, WA gateway not connected); Live WS toast fires on handoff webhook — toast-container shows '🔔 ToastTest butuh staf' and notif bell count incremented (6→7). Sound not verified in headless.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iter2.py",
+    "/app/test_reports/pytest/all_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend /api/whatsapp/webhook response omits the 'intent' field even though workflow.handle_incoming computes it — surfacing it would help external gateways/tests. Not a bug, but useful.",
+    "Router LLM prompt uses `hash(text) % 100000` as conversation-id for the router LLM call — this is fine but shares the conversation store with actual chats; consider a dedicated session/tag prefix to avoid future ambiguity.",
+    "Settings PUT still accepts arbitrary Dict without Pydantic validation for the new workflow.intents payload — malformed intents (e.g., missing 'action') would silently persist and break workflow at runtime. Add validation.",
+    "reminders.run_reminders uses gw.send_message and only marks reminder_sent=True on r.get('ok'); with WA gateway down every run will retry the same due appointments indefinitely — acceptable, but consider a retry cap or last_attempt_at field."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter2.py"
+  ],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "100% of tested flows"},
+  "test_credentials": "admin/admin123. Webhook header x-webhook-token: whk_9c2f7a1e5b8d3046.",
+  "seed_data_creation": "Created ~4 conversations via webhook during tests (fresh JIDs). One TEST_intent_iter2 workflow intent added and cleaned up. Intent-0 name edited then restored. Reminders toggle flipped and restored. No lingering test data.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Regression suite: pytest /app/backend/tests/ -v (27 tests, ~14s). Iter2-specific tests in /app/backend/tests/test_iter2.py. Frontend nav testids Indonesian (nav-koneksi/percakapan/janji-temu/knowledge/workflow/pengaturan/dashboard). Webhook /api/whatsapp/webhook response shape: {ok, handoff, replies:[]} — no 'intent' key exposed. Live WS at wss://<host>/api/ws?token=<jwt>, emits {handoff:true, patient_name, preview} on staff-needed events.",
+  "rca of the issue": "No blocking issues. WA gateway is intentionally disconnected — send-reminders returns sent=0 as expected."
+}

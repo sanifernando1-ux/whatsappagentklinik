@@ -149,31 +149,35 @@ export default function Settings() {
 
         {tab === "menu" && (
           <div className="space-y-6" data-testid="tab-menu">
-            <div>
-              <h4 className="mb-2 font-bold text-kf-ink">Label Menu Utama</h4>
-              <div className="space-y-2">
-                {(s.menu || []).map((it, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-kf-blueLight font-bold text-kf-blueDark">{it.key}</span>
-                    <input className="input flex-1" value={it.label} onChange={(e) => setS({ ...s, menu: s.menu.map((mm, idx) => idx === i ? { ...mm, label: e.target.value } : mm) })} data-testid={`menu-label-${i}`} />
-                  </div>
-                ))}
-              </div>
+            <div className="rounded-lg bg-kf-blueLight/60 px-4 py-3 text-sm text-kf-blueDark">
+              Label & nomor menu utama kini diatur di halaman <b>Alur AI (Workflow)</b> pada bagian Intent/Node.
             </div>
             <div>
               <label className="label">Kata Kunci Handoff (pisahkan dengan koma)</label>
               <input className="input" value={(s.handoff_keywords || []).join(", ")} onChange={(e) => setS({ ...s, handoff_keywords: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} data-testid="handoff-keywords" />
               <p className="mt-1 text-xs text-slate-400">Jika pasien mengetik salah satu kata ini, percakapan langsung dialihkan ke staf.</p>
             </div>
+            <div>
+              <label className="label">Kata Bernada Negatif (deteksi sentimen, pisahkan koma)</label>
+              <input className="input" value={(s.negative_words || []).join(", ")} onChange={(e) => setS({ ...s, negative_words: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} data-testid="negative-words" />
+              <p className="mt-1 text-xs text-slate-400">2 pesan negatif berturut-turut akan otomatis dieskalasi ke staf.</p>
+            </div>
           </div>
         )}
 
         {tab === "lanjutan" && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-testid="tab-lanjutan">
-            <div><label className="label">Jam Buka (slot mulai)</label><input className="input" value={s.business_hours.start} onChange={(e) => setBH("start", e.target.value)} data-testid="bh-start" /></div>
-            <div><label className="label">Jam Tutup (slot akhir)</label><input className="input" value={s.business_hours.end} onChange={(e) => setBH("end", e.target.value)} data-testid="bh-end" /></div>
-            <div><label className="label">Durasi Slot (menit)</label><input type="number" className="input" value={s.business_hours.slot_minutes} onChange={(e) => setBH("slot_minutes", Number(e.target.value))} data-testid="bh-slot" /></div>
-            <div><label className="label">Ambang Relevansi RAG (0-1)</label><input type="number" step="0.01" className="input" value={s.rag_relevant_threshold} onChange={(e) => setS({ ...s, rag_relevant_threshold: Number(e.target.value) })} data-testid="rag-threshold" /></div>
+          <div className="space-y-6" data-testid="tab-lanjutan">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div><label className="label">Jam Buka (slot mulai)</label><input className="input" value={s.business_hours.start} onChange={(e) => setBH("start", e.target.value)} data-testid="bh-start" /></div>
+              <div><label className="label">Jam Tutup (slot akhir)</label><input className="input" value={s.business_hours.end} onChange={(e) => setBH("end", e.target.value)} data-testid="bh-end" /></div>
+              <div><label className="label">Durasi Slot (menit)</label><input type="number" className="input" value={s.business_hours.slot_minutes} onChange={(e) => setBH("slot_minutes", Number(e.target.value))} data-testid="bh-slot" /></div>
+              <div><label className="label">Ambang Relevansi RAG (0-1)</label><input type="number" step="0.01" className="input" value={s.rag_relevant_threshold} onChange={(e) => setS({ ...s, rag_relevant_threshold: Number(e.target.value) })} data-testid="rag-threshold" /></div>
+            </div>
+            <button onClick={() => setS({ ...s, reminders: { ...(s.reminders || {}), enabled: !(s.reminders || {}).enabled } })} data-testid="toggle-reminders"
+              className={`flex w-full items-start justify-between rounded-xl border p-4 text-left transition ${(s.reminders || {}).enabled ? "border-kf-blue/30 bg-kf-blueLight" : "border-slate-200 bg-white"}`}>
+              <div><p className="text-sm font-bold text-kf-ink">Pengingat Janji Temu H-1</p><p className="text-xs text-slate-500">Kirim pengingat otomatis ke WhatsApp pasien 1 hari sebelum jadwal (dicek tiap 15 menit).</p></div>
+              {(s.reminders || {}).enabled ? <span className="text-kf-blue font-bold">Aktif</span> : <span className="text-slate-400 font-bold">Nonaktif</span>}
+            </button>
           </div>
         )}
       </div>

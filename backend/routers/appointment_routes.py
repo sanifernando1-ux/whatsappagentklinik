@@ -7,6 +7,7 @@ from database import db, clean, clean_list
 from auth import get_current_user
 from config import get_settings
 from workflow import available_slots, now_iso
+from reminders import run_reminders
 
 router = APIRouter(prefix="/api/appointments", tags=["appointments"])
 
@@ -61,6 +62,11 @@ async def create_appointment(req: CreateReq, user=Depends(get_current_user)):
     }
     await db.appointments.insert_one(dict(appt))
     return clean(appt)
+
+
+@router.post("/send-reminders")
+async def send_reminders(user=Depends(get_current_user)):
+    return await run_reminders(force=True)
 
 
 @router.patch("/{appt_id}")

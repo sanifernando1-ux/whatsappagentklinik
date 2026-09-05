@@ -10,6 +10,7 @@ from auth import get_current_user
 from config import get_settings
 from workflow import handle_incoming, now_iso
 import gateway_client as gw
+from ws_manager import manager
 
 load_dotenv()
 WEBHOOK_TOKEN = os.environ.get("WEBHOOK_TOKEN")
@@ -109,6 +110,15 @@ async def webhook(payload: WebhookMsg, x_webhook_token: str = Header(default="")
         })
 
     await db.conversations.update_one({"id": conv["id"]}, {"$set": updates})
+
+    patient_label = conv.get("patient_name") or wa_jid.split("@")[0]
+    await manager.broadcast({
+        "type": "handoff" if result.get("handoff") else "message",
+        "conversation_id": conv["id"],
+        "patient_name": patient_label,
+        "preview": (payload.text or "[media]")[:80],
+        "handoff": result.get("handoff", False),
+    })
 
     # Send AI replies via gateway and persist them
     for reply in result.get("replies", []):

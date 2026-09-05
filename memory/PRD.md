@@ -26,11 +26,18 @@ Bangun Web WhatsApp Agent AI untuk Klinik Kimia Farma Sepinggan (Balikpapan): as
 - Theme: Kimia Farma blue #0B6FB8 + orange #F58220, Plus Jakarta Sans, flat anti-slop UI.
 
 ## Backlog / Next
-- P1: Proactive reminders H-1 (scheduler/cron) — currently reminder_sent flag only.
-- P1: WebSocket live push for conversations (currently polling).
+- P1: WebSocket live push for conversations panel (currently toast+bell live; chat list still polls).
 - P2: RBAC multi-role staff accounts; audit log; data retention 90d anonymize.
 - P2: Embedding-based RAG (vector DB) upgrade from TF-IDF.
-- P2: AI evaluation metrics (accuracy, hallucination) dashboard.
+- P2: Pydantic validation for Settings/workflow PUT; reminder retry cap.
+
+## Implemented — Iteration 2 (05 Jun 2026)
+- Knowledge Base auto-seed: BPJS, Daftar Layanan & Tarif, SOP Pendaftaran, Jam & Lokasi.
+- Flexible Workflow engine (data-driven from settings.workflow.intents): editable intents/nodes (name, action, menu_key, keywords, examples, response, enabled, order), toggle AI semantic router, fallback (rag/handoff), welcome_extra. Full editor UI di halaman Workflow.
+- Smart & natural routing: menu number → keyword → LLM semantic router (paham bahasa bebas) → fallback RAG/LLM; empathetic system prompt.
+- Live notifications: WebSocket /api/ws (JWT), broadcast on inbound/handoff; frontend toast + beep sound + bell badge.
+- Auto H-1 appointment reminders: background loop tiap 15 menit + manual "Kirim Pengingat H-1" (POST /api/appointments/send-reminders); toggle di Settings > Lanjutan.
+- Tested: 27/27 backend pytest + full frontend flows PASS.
 
 ## Notes
 - Real WhatsApp pairing needs a physical phone scan (not automatable).

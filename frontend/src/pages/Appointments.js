@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CalendarDays, Plus, Check, X, Clock } from "lucide-react";
+import { CalendarDays, Plus, Check, X, Clock, BellRing } from "lucide-react";
 import api from "../lib/api";
 
 const STATUS = {
@@ -18,6 +18,16 @@ export default function Appointments() {
 
   const load = () => api.get("/appointments", { params: { status } }).then((r) => setAppts(r.data)).catch(() => {});
   useEffect(() => { load(); }, [status]);
+
+  const [remMsg, setRemMsg] = useState("");
+  const sendReminders = async () => {
+    setRemMsg("Mengirim…");
+    try {
+      const r = await api.post("/appointments/send-reminders");
+      setRemMsg(r.data.skipped ? "Pengingat nonaktif di Pengaturan." : `Terkirim ${r.data.sent} dari ${r.data.total_due} pengingat H-1.`);
+    } catch { setRemMsg("Gagal mengirim pengingat."); }
+    setTimeout(() => setRemMsg(""), 5000);
+  };
 
   const setStat = async (id, s) => { await api.patch(`/appointments/${id}`, { status: s }); load(); };
   const create = async (e) => {
@@ -39,7 +49,11 @@ export default function Appointments() {
             </button>
           ))}
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)} data-testid="add-appt-btn"><Plus size={18} /> Tambah Janji Temu</button>
+        <div className="flex items-center gap-2">
+          {remMsg && <span className="text-xs font-semibold text-kf-blue" data-testid="reminder-msg">{remMsg}</span>}
+          <button className="btn-ghost" onClick={sendReminders} data-testid="send-reminders-btn"><BellRing size={18} /> Kirim Pengingat H-1</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)} data-testid="add-appt-btn"><Plus size={18} /> Tambah Janji Temu</button>
+        </div>
       </div>
 
       <div className="card overflow-hidden">

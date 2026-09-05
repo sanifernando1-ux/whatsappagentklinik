@@ -38,6 +38,7 @@ export default function Layout({ children }) {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
+  const [toasts, setToasts] = useState([]);
   const loc = useLocation();
 
   useEffect(() => { setOpen(false); }, [loc.pathname]);
@@ -47,6 +48,52 @@ export default function Layout({ children }) {
     loadNotifs();
     const t = setInterval(loadNotifs, 8000);
     return () => clearInterval(t);
+  }, []);
+
+  const playBeep = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine"; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+      o.start(); o.stop(ctx.currentTime + 0.5);
+    } catch (e) { /* audio not allowed yet */ }
+  };
+
+  const pushToast = (toast) => {
+    const id = Date.now() + Math.random();
+    setToasts((t) => [...t, { ...toast, id }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem("kf_token");
+    if (!token) return;
+    const base = process.env.REACT_APP_BACKEND_URL.replace(/^http/, "ws");
+    let ws, closed = false, retry;
+    const connect = () => {
+      ws = new WebSocket(`${base}/api/ws?token=${token}`);
+      ws.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.handoff) {
+            playBeep();
+            pushToast({ title: `🔔 ${data.patient_name} butuh staf`, body: data.preview, tone: "orange" });
+            loadNotifs();
+          } else if (data.type === "message") {
+            pushToast({ title: `💬 ${data.patient_name}`, body: data.preview, tone: "blue" });
+          }
+        } catch (e) { /* noop */ }
+      };
+      ws.onclose = () => { if (!closed) retry = setTimeout(connect, 4000); };
+      ws.onerror = () => { try { ws.close(); } catch (e) {} };
+    };
+    connect();
+    return () => { closed = true; clearTimeout(retry); try { ws && ws.close(); } catch (e) {} };
   }, []);
 
   const markAll = async () => { await api.post("/notifications/read-all"); setNotifs([]); setShowNotif(false); };
@@ -140,6 +187,15 @@ export default function Layout({ children }) {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+      </div>
+
+      <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-80 flex-col gap-2" data-testid="toast-container">
+        {toasts.map((t) => (
+          <div key={t.id} className={`pointer-events-auto rounded-xl border bg-white p-4 shadow-xl ${t.tone === "orange" ? "border-l-4 border-l-kf-orange" : "border-l-4 border-l-kf-blue"}`}>
+            <p className="text-sm font-bold text-kf-ink">{t.title}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{t.body}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
