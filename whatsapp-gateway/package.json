@@ -1,0 +1,17 @@
+{
+  "name": "klinik-kf-whatsapp-gateway",
+  "version": "1.0.0",
+  "description": "Baileys WhatsApp gateway for Klinik KF Sepinggan AI Agent",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "6.7.9",
+    "@hapi/boom": "10.0.1",
+    "axios": "1.7.7",
+    "express": "4.21.0",
+    "pino": "9.4.0",
+    "qrcode": "1.5.4"
+  }
+}
