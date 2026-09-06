@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
-import google.generativeai as genai
+from google import genai
 
 load_dotenv()
 
@@ -37,10 +37,13 @@ async def _call_anthropic(system_message, user_text, model, api_key, base_url):
 
 
 async def _call_gemini(system_message, user_text, model, api_key):
-    genai.configure(api_key=api_key)
-    gm = genai.GenerativeModel(model_name=model, system_instruction=system_message)
-    resp = await gm.generate_content_async(user_text)
-    return (resp.text or "") if resp else ""
+    client = genai.Client(api_key=api_key)
+    resp = await client.aio.models.generate_content(
+        model=model,
+        contents=user_text,
+        config={"system_instruction": system_message},
+    )
+    return resp.text or ""
 
 
 async def generate_reply(system_message: str, user_text: str, session_id: str, settings: dict) -> str:

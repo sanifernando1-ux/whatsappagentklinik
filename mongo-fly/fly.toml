@@ -1,0 +1,13 @@
+app = "klinik-kf-mongo"
+primary_region = "sin"
+
+[build]
+  image = "mongo:7"
+
+[[mounts]]
+  source = "mongo_data"
+  destination = "/data/db"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
