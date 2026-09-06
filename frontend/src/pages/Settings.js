@@ -6,6 +6,7 @@ const MODELS = {
   openai: ["gpt-4o", "gpt-5.4", "gpt-4o-mini", "gpt-5.4-mini"],
   anthropic: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-opus-4-6"],
   gemini: ["gemini-3.1-pro-preview", "gemini-2.5-flash", "gemini-3-flash-preview"],
+  custom: [],
 };
 
 const TABS = [
@@ -30,7 +31,7 @@ export default function Settings() {
     setSaving(true); setSaved(false);
     const payload = { ...s };
     payload.ai = { ...s.ai };
-    if (useOwnKey && ownKey) payload.ai.api_key = ownKey; else delete payload.ai.api_key;
+    if (ownKey) payload.ai.api_key = ownKey; else delete payload.ai.api_key;
     delete payload.ai.has_api_key;
     try {
       const r = await api.put("/settings", payload);
@@ -90,6 +91,7 @@ export default function Settings() {
                   <option value="openai">OpenAI (GPT)</option>
                   <option value="anthropic">Anthropic (Claude)</option>
                   <option value="gemini">Google (Gemini)</option>
+                  <option value="custom">Custom (kompatibel OpenAI API)</option>
                 </select>
               </div>
               <div>
@@ -99,14 +101,19 @@ export default function Settings() {
                   {(MODELS[s.ai.provider] || []).map((mm) => <option key={mm} value={mm} />)}
                 </datalist>
               </div>
+              <div className="sm:col-span-2">
+                <label className="label">Base URL (opsional, wajib untuk provider Custom)</label>
+                <input className="input" placeholder="https://api.provider-anda.com/v1" value={s.ai.base_url || ""} onChange={(e) => setAI("base_url", e.target.value)} data-testid="ai-base-url" />
+                <p className="mt-1 text-xs text-slate-400">Gunakan ini untuk model AI custom apa pun yang kompatibel dengan OpenAI API (proxy, OpenRouter, self-hosted, dll). Kosongkan untuk endpoint resmi provider.</p>
+              </div>
             </div>
             <div className="rounded-lg bg-kf-blueLight/60 p-4">
               <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-kf-blueDark">
                 <input type="checkbox" checked={useOwnKey} onChange={(e) => setUseOwnKey(e.target.checked)} data-testid="ai-use-own-key" />
-                <KeyRound size={16} /> Gunakan API Key sendiri (opsi custom)
+                <KeyRound size={16} /> Ganti API Key
               </label>
-              <p className="mt-1 text-xs text-slate-500">Secara default menggunakan Emergent Universal Key. {s.ai.has_api_key ? "Saat ini: API Key custom aktif." : "Saat ini: Universal Key."}</p>
-              {useOwnKey && <input className="input mt-2" placeholder="Masukkan API key provider Anda" value={ownKey} onChange={(e) => setOwnKey(e.target.value)} data-testid="ai-own-key" />}
+              <p className="mt-1 text-xs text-slate-500">{s.ai.has_api_key ? "API Key tersimpan dan aktif. Provider/model/base URL akan terus dipakai sampai Anda mengubahnya di sini." : "Belum ada API Key tersimpan — isi untuk mengaktifkan balasan AI."}</p>
+              {(useOwnKey || !s.ai.has_api_key) && <input className="input mt-2" placeholder="Masukkan API key provider Anda" value={ownKey} onChange={(e) => setOwnKey(e.target.value)} data-testid="ai-own-key" />}
             </div>
             <div>
               <label className="label">System Prompt (Kepribadian AI)</label>
